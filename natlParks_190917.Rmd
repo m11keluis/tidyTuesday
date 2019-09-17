@@ -1,0 +1,41 @@
+---
+title: "tidyTuesday_190917"
+author: "Kelly L"
+date: "9/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r data_clean}
+# Load Libraries
+library(dplyr)
+library(ggplot2)
+
+# Grab Data
+park_visits <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-09-17/national_parks.csv")
+state_pop <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-09-17/state_pop.csv")
+gas_price <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-09-17/gas_price.csv")
+
+```
+
+```{r}
+# Grab Hawai'i Park Data
+hawaii_parks <- park_visits %>% 
+  filter(state == 'HI', !is.na(as.numeric(year)))
+
+hawaii_parks$year <- as.numeric(as.character(hawaii_parks$year))
+
+# Plot Data by Park 
+p <- ggplot(data = hawaii_parks, aes(x= year, y = visitors, color=parkname)) +
+  geom_line() + geom_point() + theme_classic() + theme(axis.text.x=element_text()) + 
+  labs(color = 'Park Names') + xlab('Year') + ylab('Visitors') +
+  scale_color_discrete(labels = c('Haleakal\u101','Hawai\u02BBi Volcanoes','Kalaupapa','Kaloko-Honok\u14dhau','Pu\u02BBuhonua O H\u14dnaunau','Pu\u02BBukohol\u101 Heiau','World War II Valor in the Pacific'))
+
+p
+
+```
