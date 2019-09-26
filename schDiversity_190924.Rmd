@@ -1,0 +1,80 @@
+---
+title: "tidyTuesday_190924"
+author: "Kelly L"
+date: "9/23/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(tidyverse)
+library(beyonce)
+
+```
+
+## R Markdown
+
+```{r load_wrangle}
+school_diversity <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-09-24/school_diversity.csv")
+
+multi_diversity <- school_diversity %>% 
+  select(LEA_NAME,ST,Multi,Total,diverse) %>% 
+  mutate(LEA_NAME = factor(LEA_NAME),
+         ST = factor(ST),
+         diverse = factor(diverse), 
+         LEA_NAME = sub("(.)", "\\U\\1", LEA_NAME, perl=TRUE)) %>% 
+  filter(Multi > 10 & Total > 5000) %>% 
+  drop_na()
+
+dans_colors <- c("#FF0000","#F6A300","#0068CC","#6600AA","#AC0088","#AA33FF","#00FFFF","#00CC00","#006611","#00AC99",
+ "#AC6844",
+ "#991100","#ACAC11","#a0f0aa","#FF00FF","#FF8611","#B9F6F6","#001166","#AC9A00","#994141","#ff1169",
+ "#0AF622","#119924","#Ac3311","#004A9A","#AcAc99","turquoise","tomato","sienna1","rosybrown",
+ "peachpuff","olivedrab3","mistyrose1","mediumorchid","indianred2","#114914","#660011","ivory3","deeppink","#331111")
+
+```
+
+
+
+```{r}
+# Number of Schools per State
+multi_stcount <- multi_diversity %>%
+  group_by(ST) %>% 
+  count(name = 'school_num')
+
+count_plot <- ggplot(data = multi_stcount, 
+       mapping = aes(x = ST, y = school_num)) +
+  geom_bar(aes(fill = ST),stat="identity", width=0.5) + 
+  scale_fill_manual(values = dans_colors) +
+  theme_classic() + 
+  xlab('State') + 
+  ylab('Count') + 
+  ggtitle('Large School Districts with >10% Multiracial Student') +
+  theme(legend.position = "none")
+
+count_plot
+
+```
+
+```{r, fig.height=10}
+
+
+school_pop <- ggplot(multi_diversity, aes(Multi, LEA_NAME, label = paste0(round(Multi, 0), "%"))) +
+  geom_segment(aes(x = 10, y = LEA_NAME, xend = Multi, yend = LEA_NAME, color =  ST)) +
+  geom_point(mapping=aes(color = ST), size = 16) +
+  geom_text(color = "white", size = 6) + 
+  scale_color_manual(values = dans_colors) +
+  theme_classic() + labs(color ='State') +
+  xlab('Multi-Ethnic Proportion of Students') + 
+  ylab('School District') + 
+  theme(text = element_text(size=20),
+        plot.title = element_text(face='bold'),
+        axis.title.x  = element_text(face='bold'),
+        axis.title.y  = element_text(face='bold'),
+        legend.title = element_text(face='bold')) +
+  ggtitle('Large School Districts') 
+
+school_pop 
+```
