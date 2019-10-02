@@ -1,0 +1,106 @@
+---
+title: "nycPizza_191001"
+author: "Kelly L"
+date: "9/30/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load Libraries
+library(tidyverse)
+library(ggplot2)
+library(ggmap)
+library(beyonce)
+library(ggrepel)
+
+# Load Datasets
+pizza_jared <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_jared.csv")
+pizza_barstool <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_barstool.csv")
+pizza_datafiniti <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_datafiniti.csv")
+train_stations <- readr::read_csv("/Users/kellyluis/Downloads/NYC_Transit_Subway_Entrance_And_Exit_Data.csv")
+```
+
+
+## Data Wrangling:
+
+```{r}
+# Wrangle Data Infinity
+pizza_datafiniti_ny <- pizza_datafiniti %>% 
+  filter(province == 'NY') %>% 
+  distinct(name,latitude, longitude, price_range_min, price_range_max) 
+
+# Wrangle Bar Stool 
+pizza_barstool_ny <- pizza_barstool %>% 
+  filter(name %in% pizza_datafiniti_ny$name & city == 'New York') %>% 
+  mutate(combo_coord = paste(latitude,longitude, sep=','))
+
+# Wrangle NYC Transit
+train_stations_ny <-train_stations %>% 
+  rename(station_latitude = `Station Latitude`,
+         station_longitude = `Station Longitude`) %>% 
+  distinct(station_latitude, station_longitude) %>% 
+  mutate(combo_coord = paste(station_latitude, station_longitude, sep=','))
+
+# Plot Overlapping Data Infinity and Bar Stool Pizzerias
+nyc_map <- get_map("Manhattan", zoom = 11,
+                   maptype='roadmap', color='bw',source='google')
+                   
+ggmap(nyc_map) + geom_point(data=train_stations_ny, aes(x=station_longitude, y=station_latitude), color="dodgerblue", size=1, alpha=0.5) + geom_point(data=pizza_barstool_ny, aes(x=longitude, y=latitude), color="red", size=3, alpha=0.25) +
+  scale_x_continuous(limits = c(-74.06, -73.9), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(40.7, 40.82), expand = c(0, 0)) + 
+  theme(axis.ticks = element_blank(), axis.text = element_blank())+
+  xlab('')+ylab('') + ggtitle('Locations of Subway Stops and Pizza Places')
+
+
+```
+
+## Building Kelly's Pizza Metric 
+Non-negotiable: Must be less than 7 minutes from a subway station   
+1 point earned for every subway stations within 7 minutes walking distance from pizza place
+
+```{r}
+find_pizza_near_me <- function(pizza, station) {
+  mapdist(from=pizza, to=station, mode = 'walking') %>% 
+  pull(minutes)-> distances
+  return(distances)
+}
+
+metric <- 0 
+
+for (pizza_land in 1:dim(pizza_barstool_ny)[1]){
+  
+  min_find <- train_stations_ny %>% 
+    mutate(minutes = apply(train_stations_ny, MARGIN = 1, function(x) find_pizza_near_me(pizza_barstool_ny$combo_coord[pizza_land], x[3]))) %>% 
+    filter(minutes < 7)
+  
+  if (dim(min_find)[1] == 0){
+        metric[pizza_land] <- 0
+      } else{
+        metric[pizza_land] <- dim(min_find)[1]
+    }
+}
+```
+
+```{r}
+pizza_barstool_ny$kelly_metric <- as.numeric(metric)
+
+pal <- beyonce_palette(91, 10, type = "continuous")
+
+top_two <- subset(pizza_barstool_ny, kelly_metric >= 7)
+
+ggmap(nyc_map) + 
+  geom_text_repel(data=top_two, aes(x=longitude, y=latitude, label = top_two$name),
+                  segment.size = 0.3, 
+                  nudge_x = 0.1,
+                  size = 4, 
+                  box.padding = 0.3) +
+  geom_point(data=pizza_barstool_ny, aes(x=longitude, y=latitude, color = kelly_metric)) + 
+  scale_color_gradient(low = pal[3], high = pal[10], breaks = c(0, 3, 6, 9, 12, 15)) +
+  scale_x_continuous(limits = c(-74.06, -73.9), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(40.7, 40.82), expand = c(0, 0)) + 
+  theme(axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_text(size=14, face="bold")) + 
+  xlab('')+ylab('') + ggtitle("Kelly's Pizzeria Scale") + labs(color="Kelly's Metric")
+
+```
