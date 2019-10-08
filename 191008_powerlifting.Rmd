@@ -1,0 +1,41 @@
+---
+title: "power_lifters"
+author: "Kelly L"
+date: "10/8/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load Libraries
+library(tidyverse)
+library(ggplot2)
+library(ggridges)
+
+# Load Dataset
+ipf_lifts <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-08/ipf_lifts.csv") 
+
+```
+
+## GGridges
+```{r}
+ipf_women <- ipf_lifts %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  filter(year %in% c(1980, 1990, 2000, 2010, 2019))
+
+ggplot(data=ipf_women, mapping = aes(x=best3squat_kg, y=year, fill=sex)) + 
+  geom_density_ridges() + 
+  scale_fill_manual(values=c("#D55E0050", "#0072B250"), labels = c("female", "male")) +
+  scale_color_manual(values = c("#D55E00", "#0072B2"), guide="none") + 
+  guides(fill = guide_legend(
+    override.aes = list(
+      fill = c("#D55E0050", "#0072B250"),
+      color = NA, point_color = NA))) +
+  labs(x = 	"Weight (kg)",
+       y = "Year",
+       title = "Squat") +
+  scale_x_continuous(limits = c(10,500)) + theme_ridges()
+
+ggsave("/Users/kellyluis/tidyTuesday/powerlifting.pdf")
+```

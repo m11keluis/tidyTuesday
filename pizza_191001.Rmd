@@ -58,7 +58,7 @@ ggmap(nyc_map) + geom_point(data=train_stations_ny, aes(x=station_longitude, y=s
 
 ## Building Kelly's Pizza Metric 
 Non-negotiable: Must be less than 7 minutes from a subway station   
-1 point earned for every subway stations within 7 minutes walking distance from pizza place
+1 point earned for every subway station within 7 minutes walking distance from pizza place
 
 ```{r}
 find_pizza_near_me <- function(pizza, station) {
@@ -87,7 +87,6 @@ for (pizza_land in 1:dim(pizza_barstool_ny)[1]){
 pizza_barstool_ny$kelly_metric <- as.numeric(metric)
 
 pal <- beyonce_palette(91, 10, type = "continuous")
-
 top_two <- subset(pizza_barstool_ny, kelly_metric >= 7)
 
 ggmap(nyc_map) + 
