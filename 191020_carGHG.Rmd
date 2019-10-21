@@ -1,0 +1,40 @@
+---
+title: "191020_car"
+author: "Kelly L"
+date: "10/20/2019"
+output: html_document
+---
+
+# Tree Map of GHG Score by Car Make
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load Libraries
+library(tidyverse)
+library(treemap)
+library(d3treeR)
+library(beyonce)
+
+# Load Dataset
+big_epa_cars <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-15/big_epa_cars.csv")
+
+```
+
+## Plot Tree map
+```{r}
+ghg_score <- big_epa_cars %>% 
+  group_by(make) %>% 
+  filter(ghgScore > -1, VClass == 'Compact Cars', year > 2019) %>% 
+  select(make, model, trany, feScore, ghgScore)
+
+
+# Make Tree Map 
+tm <- treemap(ghg_score, index=c("make","model"), vSize="ghgScore", type="index", palette = beyonce_palette(101), height = 520
+  ,width = 620)
+
+# Make Interactive
+d3tree(tm, rootname = "GHG Score for 2020 Car Makes" )
+```
+
+
