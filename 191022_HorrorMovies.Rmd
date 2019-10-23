@@ -1,0 +1,92 @@
+---
+title: "191022_HorrorMovies"
+author: "Kelly L"
+date: "10/21/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load Library
+library(tidyverse)
+library(corpus)
+library(lubridate)
+library(tidytext)
+library(circlize)
+
+# Load Dataset
+horror_raw <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-22/horror_movies.csv")
+
+# Function to delete first two sentences if it contains metadata
+delete_metadata <- function(plot_string){
+  
+  # 1) Split String into Sentences
+  temp_string = text_split(plot_string, "sentences")
+  
+  # 2) Select Lines after Metadata
+  temp_plot = temp_string['text'][temp_string['index'] >= 3,]
+  
+  # 3) Convert to Characters and Concatenate Sentences
+  plot_parse = paste0(as.character(as_corpus_text(temp_plot)), sep = " ", collapse = "")
+  
+  return(plot_parse)
+}
+
+# Test Function: Row 5 Chosen because it has multiple sentences 
+test_plot_string <- horror_raw$plot[5] 
+test_output <- delete_metadata(test_plot_string)
+```
+
+```{r}
+# Clean
+horror_movies <- horror_raw %>% 
+  
+  # 1) Add Rounded Review Rating
+  mutate(rounded_rating = factor(round(review_rating))) %>% 
+  
+  # 2) Change Release Date to Date Type
+  mutate(release_date = as.Date(release_date,format='%d-%b-%y')) %>% 
+  
+  # 3) Extract Year
+  mutate(year = factor(year(release_date))) %>% 
+  
+  # 4) Subset for Variables of Interest
+  select('title','year','rounded_rating','plot') %>% 
+  
+  # 5) Drop NA Rows
+  drop_na() %>% 
+  
+  # 6) Parse Metadata with delete_metadata function
+  rowwise() %>% 
+  mutate(plot_parse = if_else(startsWith(plot, "Directed by"), delete_metadata(plot),plot))
+
+# Replace with line 61 if you prefer gsub: gsub('^.*?(?<!\\w\\.\\w.)(?<![A-Z]\\.)(?<=\\.)\\s.*?(?<!\\w\\.\\w.)(?<![A-Z]\\.)(?<=\\.)\\s', '', plot, perl = T),
+```
+
+```{r, sentiment}
+# Clean Corpus 
+horror_corpus <- horror_movies %>%
+  unnest_tokens(word, plot) %>%
+  filter(!word %in% stop_words$word) %>% 
+  anti_join(stop_words)
+
+# Sentinment Analysis
+horror_sentiment <- horror_corpus %>%
+  inner_join(get_sentiments("nrc"))
+```
+
+
+```{r, chordDiagram}
+# Count Mood by Rating
+rating_mood <-  horror_sentiment %>%
+  filter(!sentiment %in% c("positive", "negative", "joy", "trust"), !rounded_rating %in% c(1, 2, 9, 10)) %>%
+  count(sentiment, rounded_rating) %>%
+  group_by(rounded_rating, sentiment) %>%
+  summarise(sentiment_sum = sum(n)) %>%
+  ungroup()
+
+circos.clear()
+chordDiagram(rating_mood, transparency = .2)
+title("Relationship Between Mood and Review Rating")
+```
