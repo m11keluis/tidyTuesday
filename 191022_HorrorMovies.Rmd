@@ -67,7 +67,7 @@ horror_movies <- horror_raw %>%
 ```{r, sentiment}
 # Clean Corpus 
 horror_corpus <- horror_movies %>%
-  unnest_tokens(word, plot) %>%
+  unnest_tokens(word, plot_parse) %>%
   filter(!word %in% stop_words$word) %>% 
   anti_join(stop_words)
 
@@ -88,5 +88,5 @@ rating_mood <-  horror_sentiment %>%
 
 circos.clear()
 chordDiagram(rating_mood, transparency = .2)
-title("Relationship Between Mood and Review Rating")
+title("Relationship Between Mood and Reviewer Rating")
 ```
